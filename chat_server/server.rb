@@ -1,0 +1,2 @@
+require 'sinatra'
+require 'digest'
