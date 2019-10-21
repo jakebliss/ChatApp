@@ -1,4 +1,5 @@
 require 'sinatra'
+
 require 'thin'
 require 'json'
 require 'jwt'
@@ -31,3 +32,11 @@ helpers do
     return token
   end
 end 
+
+post '/:message' do 
+
+end
+
+get '/stream/:signed_token' do 
+
+end  
