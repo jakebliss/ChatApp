@@ -6,7 +6,8 @@ WORKDIR /app
 COPY Gemfile Gemfile.lock ./
 
 RUN gem install bundler && \
-    bundle config --global frozen 1 && \
+#    bundle config --global frozen 1 && \
     bundle install
 
 COPY server.rb config.ru ./
+CMD bundle
