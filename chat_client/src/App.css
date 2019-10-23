@@ -1,22 +1,32 @@
 .App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-}
-
-.App-header {
-  background-color: #282c34;
+  background-color: #e0e0e0;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.App-link {
-  color: #09d3ac;
+.Messages {
+
 }
+
+.Users {
+  position: absolute;
+  right: 0;
+  top: 0;
+  padding: 25px;
+}
+
+.Input {
+  position: absolute;
+  bottom: 0;
+  padding: 25px;
+  left: 0;
+  width: 100%;
+}
+
+.Login {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  background: rgba(0,0,0,0.9);
+}
+
+

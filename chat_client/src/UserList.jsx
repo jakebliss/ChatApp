@@ -14,12 +14,28 @@ import {
 export default class UserList extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {
-            //State
-        }
+        this.state = { width: 0, height: 0 };
+        this.updateWindowDimensions = this.updateWindowDimensions.bind(this);
     }
+
+    componentDidMount() {
+        this.updateWindowDimensions();
+        window.addEventListener('resize', this.updateWindowDimensions);
+    }
+      
+    componentWillUnmount() {
+        window.removeEventListener('resize', this.updateWindowDimensions);
+    }
+      
+    updateWindowDimensions() {
+        this.setState({ width: window.innerWidth, height: window.innerHeight });
+    }
+
     render() {
-        const { users } = this.props;
+        const { 
+            users = ["No one else is logged in yet"] 
+        } = this.props;
+
         const users_list = users.map((user) => 
             <Users>
                 {user}
@@ -27,7 +43,11 @@ export default class UserList extends React.Component {
         );
         console.log(users)
         return(
-            <Background>
+            <Background
+                style={{
+                    height: this.state.height * .75,
+                    width: this.state.width * .20,
+                }}>
                 <Header>
                     Active Users
                 </Header>
@@ -41,6 +61,7 @@ const Background = styled.div`
     background: ${PRIMARY_BACKGROUND};
     border-radius: ${BORDER_RADIUS};
     padding: ${LOGIN_PADDING};
+    height: "100%";
 `;
 
 const Header = styled.h1`
@@ -48,9 +69,11 @@ const Header = styled.h1`
     font-size: ${HEADER_FONT_SIZE};
     color: ${HEADER_FONT_COLOR};
     padding: ${LOGIN_PADDING};
+    height: "100%";
 `;
 
 const Users = styled.p`
     color: ${LIST_FONT_COLOR};
     font-size: ${BODY_FONT_SIZE};
+    height: "100%";
 `;
