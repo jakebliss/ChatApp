@@ -54,7 +54,7 @@ get '/stream/:signed_token' do
     stream(:keep_open) do |out|
       connections[token] = out
       out << "data: Welcome!\n\n"
-      message("hi my name is jake", username)
+      users_sse()
       #disconnect(params[:signed_token])
       # out.callback {connections.delete(out)}
       # connections.reject!(&:closed?)
@@ -97,7 +97,7 @@ helpers do
   # TODO: Figure out how to generate IDs for SSE events 
   # TODO: Time might be slightly off
 
-  def disconnect(token)
+  def disconnect_sse(token)
     out = connections[token]
 
     if stream != nil
@@ -113,7 +113,7 @@ helpers do
     end
   end
 
-  def join(username) 
+  def join_sse(username) 
     data = {}
     data['user'] = username
     data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
@@ -125,7 +125,7 @@ helpers do
     }
   end
 
-  def message(message, username) 
+  def message_sse(message, username) 
     data = {}
     data['message'] = message
     data['user'] = username
@@ -138,4 +138,44 @@ helpers do
     }
   end
 
+  def part_sse(username)
+    data = {}
+    data['user'] = username
+    data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+    
+    connections.each_value { |out| 
+      out << "data: " + data.to_json + "\n"
+      out << "event: " + "Part\n"
+      out << "id: " + "tempID\n\n"
+    }
+  end
+
+  def server_status_sse(status)
+    data = {}
+    data['status'] = status
+    data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+    
+    connections.each_value { |out| 
+      out << "data: " + data.to_json + "\n"
+      out << "event: " + "ServerStatus\n"
+      out << "id: " + "tempID\n\n"
+    }
+  end 
+
+  def users_sse()
+    user_list = []
+    users.each_key { |user|
+      user_list << user 
+    }
+
+    data = {}
+    data['users'] = user_list
+    data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+    
+    connections.each_value { |out| 
+      out << "data: " + data.to_json + "\n"
+      out << "event: " + "Users\n"
+      out << "id: " + "tempID\n\n"
+    }
+  end
 end 
