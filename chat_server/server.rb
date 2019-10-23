@@ -4,6 +4,8 @@ require 'thin'
 require 'json'
 require 'jwt'
 
+ENV['JWT_SECRET'] = "notasecret"
+
 set :server, :thin
 connections = []
 users = {}
@@ -17,12 +19,11 @@ post '/login' do
   else 
     user = users[username]
     if user == nil 
-      token = generate_JWT(password)
+      token = generate_JWT(username)
         response = {}
         response['token'] = token
 
         users[username] = create_new_user(password, token)
-        puts users
         [201, {}, response.to_json]
     else   
       if user['password'] == password
@@ -31,7 +32,6 @@ post '/login' do
         response['token'] = token
 
         users[username]['token'] = token
-        puts users
         [201, {}, response.to_json]
       else 
       [403, []]
@@ -67,26 +67,24 @@ helpers do
       return new_user
   end 
 
-  def generate_JWT(secret_key)
+  def generate_JWT(username)
     payload = {}
-    token = JWT.encode payload, secret_key, 'HS256'
+    payload['data'] = username
+    token = JWT.encode payload, ENV['JWT_SECRET'], 'HS256'
     return token
   end
 
   def decode_JWT(token)
-    if token != nil && token.start_with?('Bearer ')
-      begin
-        if token.split(' ')[1].split('.').length == 3
-          decoded_token = JWT.decode token.split(' ')[1], ENV['JWT_SECRET'], true, { algorithm: 'HS256' }
-          return decoded_token
-        else
-          return nil
-        end
-        rescue
-          return nil
-        end
-    else
-      return nil
-    end
+    begin
+      puts 'hi'
+      if token.split('.').length == 3
+        decoded_token = JWT.decode token, ENV['JWT_SECRET'], true, { algorithm: 'HS256' }
+        return decoded_token
+      else
+        return nil
+      end
+      rescue
+        return nil
+      end
   end
 end 
