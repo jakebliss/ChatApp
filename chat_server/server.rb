@@ -50,7 +50,6 @@ end
 post '/message' do 
   status = 201
   message = params[:message]
-  puts message
   if message == ""
     status = 422
     event = []
