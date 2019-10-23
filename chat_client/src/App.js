@@ -4,6 +4,7 @@ import MessageList from './MessageList';
 import './App.css';
 import LoginComponent from './LoginComponent'
 import 'bootstrap/dist/css/bootstrap.min.css';
+import Input from './Input';
 
 function App() {
   const messages = [
@@ -13,6 +14,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
+        <Input/>
       </header>
     </div>
   );
