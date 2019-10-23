@@ -4,6 +4,8 @@ require 'thin'
 require 'json'
 require 'jwt'
 
+ENV['JWT_SECRET'] = "notasecret"
+
 post '/login' do 
   username = params[:username]
   password = params[:password]
@@ -21,8 +23,8 @@ post '/login' do
     end
   end 
 
-  # puts username
-  # puts password
+  puts username
+  puts params
 end
 
 helpers do
@@ -33,8 +35,44 @@ helpers do
   end
 end 
 
-post '/:message' do 
-
+post '/message' do
+  status = 201
+  message = params[:message]
+  if message == ""
+    status = 422
+    event = []
+  end
+  event = []
+  token = request.env["HTTP_AUTHORIZATION"]
+  if token == ""
+    status = 422
+    event = []
+  end
+  if token.split(' ')[0] != "Bearer"
+    status = 422
+    event = []
+  end
+  begin
+    token = JWT.decode token.split(' ')[1], ENV['JWT_SECRET'], true, {algorithm: 'HS256'}
+  rescue JWT::VerificationError => e
+    puts "Verify Error"
+    status = 403
+    event = []
+  rescue JWT::ExpiredSignature => e
+    puts "Expire Error"
+    status = 403
+    event = []
+  rescue JWT::ImmatureSignature => e
+    puts "Immature"
+    status = 403
+    event = []
+  rescue JWT::DecodeError => e
+    puts "DECODE ERROR"
+    status = 403
+    event = []
+  end
+  puts request.env["HTTP_AUTHORIZATION"]
+  [status, event]
 end
 
 get '/stream/:signed_token' do 
