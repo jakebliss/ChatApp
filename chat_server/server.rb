@@ -52,8 +52,32 @@ post '/login' do
   end 
 end
 
-post '/:message' do 
-
+post '/message' do 
+  status = 201
+  message = params[:message]
+  if message == ""
+    status = 422
+    event = []
+  end
+  event = []
+  token = request.env["HTTP_AUTHORIZATION"]
+  if token == "" or token == nil
+    status = 422
+    event = []
+  elsif token.split(' ')[0] != "Bearer"
+    status = 422
+    event = []
+  elsif decode_JWT(token.split(' ')[1] == nil)
+    status = 403
+    event = []
+  elsif find_user(token.split(' ')[1], users) == false
+    status = 403
+    event = []
+  end
+  if status == 201
+    message_sse(message, find_user(token.split(' ')[1], users))
+  end
+  [status, event]
 end
 
 get '/stream/:signed_token' do
@@ -123,7 +147,21 @@ helpers do
       end
   end
 
-  def disconnect_sse(token, username)
+
+  def find_user(token, users)
+    user_exists = false
+    users.each { |key, value|
+      if value['token'] == token
+        user_exists = key
+      end 
+    }
+    return user_exists
+  end
+
+  # TODO: Figure out how to generate IDs for SSE events 
+  # TODO: Time might be slightly off
+
+  def disconnect_sse(token)
     out = connections[token]
 
     if stream != nil
@@ -291,3 +329,4 @@ helpers do
     return last_event_id
   end
 end 
+
