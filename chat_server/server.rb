@@ -47,7 +47,7 @@ post '/login' do
   end 
 end
 
-post '/:message' do 
+post '/message' do 
   status = 201
   message = params[:message]
   if message == ""
@@ -68,6 +68,9 @@ post '/:message' do
   elsif find_user(token.split(' ')[1], users) == false
     status = 403
     event = []
+  end
+  if status == 201
+    message_sse(message, find_user(token.split(' ')[1], users))
   end
   [status, event]
 end
@@ -137,7 +140,7 @@ helpers do
     user_exists = false
     users.each { |key, value|
       if value['token'] == token
-        user_exists = true
+        user_exists = key
       end 
     }
     return user_exists
