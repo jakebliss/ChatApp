@@ -52,7 +52,8 @@ get '/stream/:signed_token' do
     stream(:keep_open) do |out|
       connections << out 
       out << "data: Welcome!\n\n"
-      out.callback {connections.delete(out)}
+      # disconnect(out)
+      # out.callback {connections.delete(out)}
       connections.reject!(&:closed?)
     end 
   end
@@ -76,7 +77,6 @@ helpers do
 
   def decode_JWT(token)
     begin
-      puts 'hi'
       if token.split('.').length == 3
         decoded_token = JWT.decode token, ENV['JWT_SECRET'], true, { algorithm: 'HS256' }
         return decoded_token
@@ -86,5 +86,16 @@ helpers do
       rescue
         return nil
       end
+  end
+
+  def disconnect(out)
+    data = {} 
+    data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+
+    out << "data: " + data.to_json + "\n"
+    out << "event: " + "Disconnect\n"
+    out << "id: " + "tempID\n\n"
+
+    out.close
   end
 end 
