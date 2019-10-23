@@ -54,7 +54,7 @@ get '/stream/:signed_token' do
     stream(:keep_open) do |out|
       connections[token] = out
       out << "data: Welcome!\n\n"
-      join(username)
+      message("hi my name is jake", username)
       #disconnect(params[:signed_token])
       # out.callback {connections.delete(out)}
       # connections.reject!(&:closed?)
@@ -94,6 +94,9 @@ helpers do
       end
   end
 
+  # TODO: Figure out how to generate IDs for SSE events 
+  # TODO: Time might be slightly off
+
   def disconnect(token)
     out = connections[token]
 
@@ -121,4 +124,18 @@ helpers do
       out << "id: " + "tempID\n\n"
     }
   end
+
+  def message(message, username) 
+    data = {}
+    data['message'] = message
+    data['user'] = username
+    data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+    
+    connections.each_value { |out| 
+      out << "data: " + data.to_json + "\n"
+      out << "event: " + "Message\n"
+      out << "id: " + "tempID\n\n"
+    }
+  end
+
 end 
