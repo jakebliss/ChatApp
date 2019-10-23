@@ -9,8 +9,13 @@ ENV['JWT_SECRET'] = "notasecret"
 set :server, :thin
 set :connections, {}
 set :users, {}
+set :server_events, []
+
+#TODO: Handle Disconnect
+#TODO: Hookup messages endpoint to appropriate sse 
 
 post '/login' do 
+  server_status_sse('Server start')
   username = params[:username]
   password = params[:password]
 
@@ -24,6 +29,7 @@ post '/login' do
         response['token'] = token
 
         users[username] = create_new_user(password, token)
+        join_sse(username)
         [201, {}, response.to_json]
     else   
       if user['password'] == password
@@ -32,6 +38,7 @@ post '/login' do
         response['token'] = token
 
         users[username]['token'] = token
+        join_sse(username)
         [201, {}, response.to_json]
       else 
       [403, []]
@@ -49,12 +56,22 @@ get '/stream/:signed_token' do
   decoded_token = decode_JWT(token)
   if decoded_token == nil 
     [403, []]
-  else 
+  else
+    existing_out = connections[token]
+
+    if existing_out != nil
+      disconnect_sse(token)
+    end 
+
     username = decoded_token[0]['data']
     stream(:keep_open) do |out|
       connections[token] = out
-      out << "data: Welcome!\n\n"
-      users_sse()
+      server_events.each { |event|
+        out << "data: " + event['data'].to_json + "\n"
+        out << "event: " + event['type'].to_s + "\n"
+        out << "id: " + event['id'].to_s + "\n\n"
+      }
+      users_sse(token)
       #disconnect(params[:signed_token])
       # out.callback {connections.delete(out)}
       # connections.reject!(&:closed?)
@@ -65,6 +82,7 @@ end
 helpers do
   def connections; self.class.connections; end 
   def users; self.class.users; end 
+  def server_events; self.class.server_events; end
 
   def create_new_user(password, token) 
       new_user = {}
@@ -101,81 +119,121 @@ helpers do
     out = connections[token]
 
     if stream != nil
+      event = {}
       data = {} 
       data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
 
-      out << "data: " + data.to_json + "\n"
-      out << "event: " + "Disconnect\n"
-      out << "id: " + "tempID\n\n"
+      event['data'] = data
+      event['type'] = 'Disconnect'
+      event['id'] = 'tempID'
+
+      out << "data: " + event['data'].to_json + "\n"
+      out << "event: " + event['type'] + "\n"
+      out << "id: " + event['id'] + "\n\n"
 
       out.close
       connections.delete(token)
+      add_to_event_queue(event)
     end
   end
 
   def join_sse(username) 
+    event = {}
     data = {}
     data['user'] = username
     data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
     
-    connections.each_value { |out| 
-      out << "data: " + data.to_json + "\n"
-      out << "event: " + "Join\n"
-      out << "id: " + "tempID\n\n"
-    }
+    event['data'] = data
+    event['type'] = 'Join'
+    event['id'] = 'tempID'
+    
+    send_event(event)
+    add_to_event_queue(event)
   end
 
   def message_sse(message, username) 
+    event = {}
     data = {}
     data['message'] = message
     data['user'] = username
     data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+
+    event['data'] = data
+    event['type'] = 'Message'
+    event['id'] = 'tempID'
     
-    connections.each_value { |out| 
-      out << "data: " + data.to_json + "\n"
-      out << "event: " + "Message\n"
-      out << "id: " + "tempID\n\n"
-    }
+    send_event(event)
+    add_to_event_queue(event)
   end
 
   def part_sse(username)
+    event = {}
     data = {}
     data['user'] = username
     data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+
+    event['data'] = data
+    event['type'] = 'Part'
+    event['id'] = 'tempID'
     
-    connections.each_value { |out| 
-      out << "data: " + data.to_json + "\n"
-      out << "event: " + "Part\n"
-      out << "id: " + "tempID\n\n"
-    }
+    send_event(event)
+    add_to_event_queue(event)
   end
 
   def server_status_sse(status)
+    event = {}
     data = {}
     data['status'] = status
     data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
     
-    connections.each_value { |out| 
-      out << "data: " + data.to_json + "\n"
-      out << "event: " + "ServerStatus\n"
-      out << "id: " + "tempID\n\n"
-    }
+    event['data'] = data
+    event['type'] = 'ServerStatus'
+    event['id'] = 'tempID'
+    
+    send_event(event)
+    add_to_event_queue(event)
   end 
 
-  def users_sse()
-    user_list = []
-    users.each_key { |user|
-      user_list << user 
-    }
+  def users_sse(token)
+    out = connections[token]
 
-    data = {}
-    data['users'] = user_list
-    data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
-    
+    if out != nil
+      user_list = []
+      users.each_key { |user|
+        user_list << user 
+      }
+
+      event = {}
+      data = {}
+      data['users'] = user_list
+      data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+
+      event['data'] = data
+      event['type'] = 'Users'
+      event['id'] = 'tempID'
+
+      out << "data: " + event['data'].to_json + "\n"
+      out << "event: " + event['type'] + "\n"
+      out << "id: " + event['id'] + "\n\n"
+
+      add_to_event_queue(event)
+    end  
+  end
+
+  def send_event(event) 
     connections.each_value { |out| 
-      out << "data: " + data.to_json + "\n"
-      out << "event: " + "Users\n"
-      out << "id: " + "tempID\n\n"
+      out << "data: " + event['data'].to_json + "\n"
+      out << "event: " + event['type'].to_s + "\n"
+      out << "id: " + event['id'].to_s + "\n\n"
     }
   end
+
+  def add_to_event_queue(event) 
+    if server_events.length > 100
+      server_events.shift
+    end
+    server_events.push(event)  
+  end
+
+
 end 
