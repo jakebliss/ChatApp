@@ -1,8 +1,9 @@
 require 'sinatra'
-
+require 'sinatra/cross_origin'
 require 'thin'
 require 'json'
 require 'jwt'
+require 'securerandom'
 
 ENV['JWT_SECRET'] = "notasecret"
 
@@ -10,12 +11,32 @@ set :server, :thin
 set :connections, {}
 set :users, {}
 set :server_events, []
+set :bind, '0.0.0.0'
+#set :server_started, false;
+$server_started = false
 
-#TODO: Handle Disconnect
-#TODO: Hookup messages endpoint to appropriate sse 
+configure do
+  enable :cross_origin
+end
+  
+before do
+  response.headers['Access-Control-Allow-Origin'] = '*'
+end
+  
+# routes...
+options "*" do
+  response.headers["Allow"] = "GET, PUT, POST, DELETE, OPTIONS"
+  response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-User-Email, X-Auth-Token"
+  response.headers["Access-Control-Allow-Origin"] = "*"
+  200
+end
 
 post '/login' do 
-  server_status_sse('Server start')
+  if !$server_started 
+    server_status_sse("Server Started")
+    $server_started = true
+  end
+
   username = params[:username]
   password = params[:password]
 
@@ -33,7 +54,7 @@ post '/login' do
         [201, {}, response.to_json]
     else   
       if user['password'] == password
-        token = generate_JWT(password)
+        token = generate_JWT(username)
         response = {}
         response['token'] = token
 
@@ -56,6 +77,7 @@ post '/message' do
   end
   event = []
   token = request.env["HTTP_AUTHORIZATION"]
+
   if token == "" or token == nil
     status = 422
     event = []
@@ -78,35 +100,43 @@ end
 get '/stream/:signed_token' do
   token = params[:signed_token]
   decoded_token = decode_JWT(token)
-  if decoded_token == nil 
+  username = decoded_token[0]['data']
+  if decoded_token == nil || users[username] == nil
     [403, []]
   else
     existing_out = connections[token]
 
     if existing_out != nil
-      disconnect_sse(token)
+      disconnect_sse(token, username)
     end 
 
-    username = decoded_token[0]['data']
-    stream(:keep_open) do |out|
-      connections[token] = out
-      server_events.each { |event|
-        out << "data: " + event['data'].to_json + "\n"
-        out << "event: " + event['type'].to_s + "\n"
-        out << "id: " + event['id'].to_s + "\n\n"
-      }
-      users_sse(token)
-      #disconnect(params[:signed_token])
-      # out.callback {connections.delete(out)}
-      # connections.reject!(&:closed?)
-    end 
+    response_headers = {} 
+    response_headers["Content-Type"] = 'text/event-stream'
+
+    [200, response_headers, 
+      stream(:keep_open) do |out|
+        connections[token] = out
+        
+        connections.reject! {|token, out| out.closed?}
+
+        last_event_id = request.env['HTTP_LAST_EVENT_ID']
+        
+        #get_missed_messages(last_event_id, token)
+        # if last_event_id == nil
+        # else 
+        get_missed_messages(last_event_id, token)
+        # end
+        users_sse(token)
+        out.callback { disconnect_sse(token, username) }
+      end
+    ]
   end
-end  
+end   
 
 helpers do
   def connections; self.class.connections; end 
   def users; self.class.users; end 
-  def server_events; self.class.server_events; end
+  def server_events; self.class.server_events; end 
 
   def create_new_user(password, token) 
       new_user = {}
@@ -136,6 +166,7 @@ helpers do
       end
   end
 
+
   def find_user(token, users)
     user_exists = false
     users.each { |key, value|
@@ -149,17 +180,17 @@ helpers do
   # TODO: Figure out how to generate IDs for SSE events 
   # TODO: Time might be slightly off
 
-  def disconnect_sse(token)
+  def disconnect_sse(token, username)
     out = connections[token]
 
     if stream != nil
       event = {}
       data = {} 
-      data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+      data['created'] = Time.now.to_f
 
       event['data'] = data
       event['type'] = 'Disconnect'
-      event['id'] = 'tempID'
+      event['id'] = generate_encoded_id
 
       out << "data: " + event['data'].to_json + "\n"
       out << "event: " + event['type'] + "\n"
@@ -168,6 +199,7 @@ helpers do
       out.close
       connections.delete(token)
       add_to_event_queue(event)
+      part_sse(username)
     end
   end
 
@@ -175,11 +207,11 @@ helpers do
     event = {}
     data = {}
     data['user'] = username
-    data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+    data['created'] = Time.now.to_f
     
     event['data'] = data
     event['type'] = 'Join'
-    event['id'] = 'tempID'
+    event['id'] = generate_encoded_id
     
     send_event(event)
     add_to_event_queue(event)
@@ -190,11 +222,11 @@ helpers do
     data = {}
     data['message'] = message
     data['user'] = username
-    data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+    data['created'] = Time.now.to_f
 
     event['data'] = data
     event['type'] = 'Message'
-    event['id'] = 'tempID'
+    event['id'] = generate_encoded_id
     
     send_event(event)
     add_to_event_queue(event)
@@ -204,11 +236,11 @@ helpers do
     event = {}
     data = {}
     data['user'] = username
-    data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+    data['created'] = Time.now.to_f
 
     event['data'] = data
     event['type'] = 'Part'
-    event['id'] = 'tempID'
+    event['id'] = generate_encoded_id
     
     send_event(event)
     add_to_event_queue(event)
@@ -218,11 +250,11 @@ helpers do
     event = {}
     data = {}
     data['status'] = status
-    data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+    data['created'] = Time.now.to_f
     
     event['data'] = data
     event['type'] = 'ServerStatus'
-    event['id'] = 'tempID'
+    event['id'] = generate_encoded_id
     
     send_event(event)
     add_to_event_queue(event)
@@ -240,11 +272,11 @@ helpers do
       event = {}
       data = {}
       data['users'] = user_list
-      data['created'] = Time.new(1993, 02, 24, 12, 0, 0, "+09:00").to_i
+      data['created'] = Time.now.to_f
 
       event['data'] = data
       event['type'] = 'Users'
-      event['id'] = 'tempID'
+      event['id'] = generate_encoded_id
 
       out << "data: " + event['data'].to_json + "\n"
       out << "event: " + event['type'] + "\n"
@@ -269,5 +301,44 @@ helpers do
     server_events.push(event)  
   end
 
+  def get_old_messages_status(token)
+    out = connections[token]
+    server_events.each { |event|
+      if event['type'] == 'Message' || event['type'] == 'ServerStatus'
+        out << "data: " + event['data'].to_json + "\n"
+        out << "event: " + event['type'].to_s + "\n"
+        out << "id: " + event['id'].to_s + "\n\n"
+      end
+    }
+  end
 
+  def get_missed_messages(last_event_id, token)
+    out = connections[token] 
+    last_message_found = false 
+
+    server_events.each { |event|
+      if last_message_found
+        if event['type'] == 'Message'
+          out << "data: " + event['data'].to_json + "\n"
+          out << "event: " + event['type'].to_s + "\n"
+          out << "id: " + event['id'].to_s + "\n\n"
+        end
+      else 
+        if event['id'] == last_event_id
+          last_message_found = true 
+        end
+      end
+    }
+
+    if !last_message_found
+      get_old_messages_status(token)
+    end 
+  end
+
+  # Side effects, increments last_event_id
+  def generate_encoded_id  
+    last_event_id = SecureRandom.hex(10)
+    return last_event_id
+  end
 end 
+
