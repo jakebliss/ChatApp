@@ -18,6 +18,7 @@ export default class LoginForm extends React.Component {
         this.state = {
             userName: 'Jake',
             passWord: '123',
+            url: 'localhost',
             width: 0,
             height: 0,
         }
@@ -44,27 +45,59 @@ export default class LoginForm extends React.Component {
 
     handleLogin(event) {
         //Submit button
-        console.log(event)
+        console.log(this.state.userName);
+        console.log(this.state.passWord);
+        console.log(this.state.url);
+        var request = new XMLHttpRequest();
+        var form = new FormData();
+        var password = this.state.passWord
+        var username = this.state.userName
+        var url = this.state.url
+        form.append("password", password);
+        form.append("password", username);
+        sessionStorage.url = url;
+        console.log("URL:" + sessionStorage.url);
+        request.open("POST", sessionStorage.url + "/login");
+        request.onreadystatechange = function() {
+            console.log(this)
+            if (this.readyState != 4) return;
+            if (this.status === 201) {
+                password = "";
+                username = "";
+                url = ""
+                //TODO store token open stream
+            } 
+            else if (this.status === 403) {
+                alert("Invalid username or password")
+            }
+            else {
+                alert("failure to /login")
+            }
+        };
+        request.send(form);
+        this.setState({
+            userName: username,
+            password: password,
+            url: url,
+        })
     }
 
     handleUsernameChange(event) {
-        //Submit button
-        console.log(event)
+        this.setState({ userName: event.target.value })
     }
 
     handlePasswordChange(event) {
-        //Submit button
-        console.log(event)
+        this.setState({ passWord: event.target.value })
     }
 
     handleURLChange(event) {
-        console.log(event)
+        this.setState( {url: event.target.value} )
     }
 
 
     render() {
         return (
-            <Dim
+            <div
             style ={{
                 width: window.innerWidth,
                 height: window.innerHeight,
@@ -82,22 +115,22 @@ export default class LoginForm extends React.Component {
                     <Form>
                         <Form.Group controlId="formBasicEmail">
                             <Form.Label>Chat URL</Form.Label>
-                            <Form.Control onChange={this.handleURLChange} type="email" placeholder="" />
+                            <Form.Control onChange={this.handleURLChange} type="email" placeholder={this.state.url} />
                         </Form.Group>
 
                         <Form.Group controlId="formBasicEmail">
                             <Form.Label>Email address</Form.Label>
-                            <Form.Control onChange={this.handleUsernameChange} type="email" placeholder="Enter email" />
+                            <Form.Control onChange={this.handleUsernameChange} type="email" placeholder={this.state.userName} />
                         </Form.Group>
 
                         <Form.Group controlId="formBasicPassword">
                             <Form.Label>Password</Form.Label>
-                            <Form.Control onChange={this.handlePasswordChange} type="password" placeholder="Password" />
+                            <Form.Control onChange={this.handlePasswordChange} type="password" placeholder={this.state.passWord} />
                         </Form.Group>
                         <button onClick={this.handleLogin} type="button" class="btn btn-outline-primary">Submit</button>
                     </Form>
                 </Background>
-            </Dim>
+            </div>
         )
     }
 
@@ -114,12 +147,4 @@ const Header = styled.h1`
     font-size: ${HEADER_FONT_SIZE};
     color: ${HEADER_FONT_COLOR};
     padding: ${LOGIN_PADDING};
-`;
-
-const Entry  = styled.div`
-    font-size: ${BODY_FONT_SIZE};
-`;
-
-const Dim = styled.div`
-
 `;

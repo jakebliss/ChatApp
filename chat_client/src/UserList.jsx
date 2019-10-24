@@ -41,7 +41,6 @@ export default class UserList extends React.Component {
                 {user}
             </Users>
         );
-        console.log(users)
         return(
             <Background
                 style={{
