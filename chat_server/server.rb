@@ -12,7 +12,7 @@ set :connections, {}
 set :users, {}
 set :server_events, []
 set :bind, '0.0.0.0'
-#set :server_started, false;
+
 $server_started = false
 
 configure do
@@ -51,7 +51,10 @@ post '/login' do
 
         users[username] = create_new_user(password, token)
         join_sse(username)
-        [201, {}, response.to_json]
+
+        response_headers = {} 
+        response_headers["keep-alive"] = 'timeout=600'
+        [201, response_headers, response.to_json]
     else   
       if user['password'] == password
         token = generate_JWT(username)
@@ -59,7 +62,6 @@ post '/login' do
         response['token'] = token
 
         users[username]['token'] = token
-        join_sse(username)
         [201, {}, response.to_json]
       else 
       [403, []]
@@ -78,6 +80,8 @@ post '/message' do
   event = []
   token = request.env["HTTP_AUTHORIZATION"]
 
+  response_headers = {} 
+
   if token == "" or token == nil
     status = 422
     event = []
@@ -92,9 +96,10 @@ post '/message' do
     event = []
   end
   if status == 201
+    response_headers["keep-alive"] = 'timeout=600'
     message_sse(message, find_user(token.split(' ')[1], users))
   end
-  [status, event]
+  [status, response_headers, event]
 end
 
 get '/stream/:signed_token' do
@@ -104,6 +109,7 @@ get '/stream/:signed_token' do
   if decoded_token == nil || users[username] == nil
     [403, []]
   else
+    join_sse(username)
     existing_out = connections[token]
 
     if existing_out != nil
@@ -112,6 +118,7 @@ get '/stream/:signed_token' do
 
     response_headers = {} 
     response_headers["Content-Type"] = 'text/event-stream'
+    response_headers["keep-alive"] = 'timeout=600'
 
     [200, response_headers, 
       stream(:keep_open) do |out|

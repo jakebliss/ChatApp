@@ -12,3 +12,4 @@ require: []
 wait: 30
 threadpool_size: 20
 daemonize: true
+tag: chat_server
