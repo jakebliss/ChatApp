@@ -5,7 +5,6 @@ import {
     BORDER_RADIUS,
     BORDER_BOTTOM_HEADER,
     HEADER_FONT_SIZE,
-    BODY_FONT_SIZE,
     HEADER_FONT_COLOR,
     LOGIN_PADDING,
 } from './styles'
@@ -16,11 +15,12 @@ export default class LoginForm extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            userName: 'Jake',
-            passWord: '123',
-            url: 'localhost',
+            userName: 'enter username',
+            passWord: 'enter password',
+            url: 'enter url',
             width: 0,
             height: 0,
+            showLogin: 1,
         }
 
         this.handleLogin = this.handleLogin.bind(this);
@@ -43,43 +43,12 @@ export default class LoginForm extends React.Component {
         this.setState({ width: window.innerWidth, height: window.innerHeight });
     }
 
-    handleLogin(event) {
-        //Submit button
-        console.log(this.state.userName);
-        console.log(this.state.passWord);
-        console.log(this.state.url);
-        var request = new XMLHttpRequest();
-        var form = new FormData();
-        var password = this.state.passWord
-        var username = this.state.userName
-        var url = this.state.url
-        form.append("password", password);
-        form.append("password", username);
-        sessionStorage.url = url;
-        console.log("URL:" + sessionStorage.url);
-        request.open("POST", sessionStorage.url + "/login");
-        request.onreadystatechange = function() {
-            console.log(this)
-            if (this.readyState != 4) return;
-            if (this.status === 201) {
-                password = "";
-                username = "";
-                url = ""
-                //TODO store token open stream
-            } 
-            else if (this.status === 403) {
-                alert("Invalid username or password")
-            }
-            else {
-                alert("failure to /login")
-            }
-        };
-        request.send(form);
-        this.setState({
-            userName: username,
-            password: password,
-            url: url,
-        })
+    handleLogin() {
+        this.props.loginHandler(
+            this.state.url, 
+            this.state.userName, 
+            this.state.passWord
+        );
     }
 
     handleUsernameChange(event) {
@@ -93,7 +62,6 @@ export default class LoginForm extends React.Component {
     handleURLChange(event) {
         this.setState( {url: event.target.value} )
     }
-
 
     render() {
         return (
@@ -114,17 +82,17 @@ export default class LoginForm extends React.Component {
                     </Header>
                     <Form>
                         <Form.Group controlId="formBasicEmail">
-                            <Form.Label>Chat URL</Form.Label>
-                            <Form.Control onChange={this.handleURLChange} type="email" placeholder={this.state.url} />
+                            <Form.Label className="login-form">Chat URL</Form.Label>
+                            <Form.Control onChange={this.handleURLChange}  placeholder={this.state.url} />
                         </Form.Group>
 
                         <Form.Group controlId="formBasicEmail">
-                            <Form.Label>Email address</Form.Label>
-                            <Form.Control onChange={this.handleUsernameChange} type="email" placeholder={this.state.userName} />
+                            <Form.Label className="login-form"> Email address</Form.Label>
+                            <Form.Control onChange={this.handleUsernameChange} placeholder={this.state.userName} />
                         </Form.Group>
 
                         <Form.Group controlId="formBasicPassword">
-                            <Form.Label>Password</Form.Label>
+                            <Form.Label className="login-form">Password</Form.Label>
                             <Form.Control onChange={this.handlePasswordChange} type="password" placeholder={this.state.passWord} />
                         </Form.Group>
                         <button onClick={this.handleLogin} type="button" class="btn btn-outline-primary">Submit</button>
@@ -140,6 +108,7 @@ const Background = styled.div`
     background: ${PRIMARY_BACKGROUND};
     border-radius: ${BORDER_RADIUS};
     padding: ${LOGIN_PADDING};
+    box-shadow: 0px 3px 10px rgba(0,0,0,0.9);
 `;
 
 const Header = styled.h1`

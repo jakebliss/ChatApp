@@ -4,17 +4,23 @@ import {
     PRIMARY_BACKGROUND,
     BORDER_RADIUS,
     BORDER_BOTTOM_HEADER,
-    HEADER_FONT_SIZE,
     HEADER_FONT_COLOR,
-    LOGIN_PADDING,
+    HEADER_FONT_SIZE,
 } from './styles'
 import Form from "react-bootstrap/Form";
+import Button from "react-bootstrap/Button";
+var message = ""
+
 
 export default class Input extends React.Component {
     constructor(props) {
         super(props);
-        this.state = { width: 0, height: 0 };
+        this.state = { 
+            width: 0, 
+            height: 0,
+         };
         this.updateWindowDimensions = this.updateWindowDimensions.bind(this);
+        this.handleMessageChange = this.handleMessageChange.bind(this);
     }
     
     componentDidMount() {
@@ -30,23 +36,28 @@ export default class Input extends React.Component {
         this.setState({ width: window.innerWidth, height: window.innerHeight });
     }
 
+    handleMessageChange(event) {
+        message = event.target.value
+    }
+
     render() {
-
-        const {
-            status = "Not logged in"
-        } = this.props
-
         return (
             <Background
                 style={{
-                    height: this.state.height * .15,
+                    height: this.state.height * .08,
                 }}>
                 <Header>
-                    Status: {status}
                 </Header>
-                <Form>
-                    <Form.Control placeholder="Type message" />
-                </Form>
+                <Container>
+                    <Form
+                        style={{
+                            width: this.state.width ,
+                            paddingRight: 5,
+                        }}>
+                        <Form.Control onChange={this.handleMessageChange} placeholder="Type message" />
+                    </Form>
+                    <Button onClick={this.props.send(message)}>send</Button>
+                </Container>
             </Background>
         )
     }
@@ -56,11 +67,16 @@ const Background = styled.div`
     background: ${PRIMARY_BACKGROUND};
     border-radius: ${BORDER_RADIUS};
     padding: 10px;
+    box-shadow: 0px 3px 10px rgba(0,0,0,0.9);
 `;
 
 const Header = styled.h1`
     border-bottom: ${BORDER_BOTTOM_HEADER};
-    font-size: 20px;
+    font-size: ${HEADER_FONT_SIZE};
     color: ${HEADER_FONT_COLOR};
-    padding: 10px;
+`;
+
+const Container = styled.div`
+    display: flex;
+    flex-direction: row;
 `;

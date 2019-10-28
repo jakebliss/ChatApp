@@ -11,7 +11,7 @@ import {
     BODY_FONT_SIZE,
 } from './styles'
 
-export default class UserList extends React.Component {
+export default class Message extends React.Component {
     constructor(props) {
         super(props);
         this.state = { width: 0, height: 0 };
@@ -30,51 +30,54 @@ export default class UserList extends React.Component {
     updateWindowDimensions() {
         this.setState({ width: window.innerWidth, height: window.innerHeight });
     }
+    
+    date_format(timestamp) {
+        var date = new Date(timestamp * 1000);
+        return (
+            date.toLocaleDateString("en-US") +
+            " " +
+            date.toLocaleTimeString("en-US")
+        );
+    }
 
     render() {
-        const { 
-            users = ["No one else is logged in yet"] 
+        const {
+            time = 0,
+            user = 0,
+            text = 0,
         } = this.props;
-
-        const users_list = users.map((user) => 
-            <Users>
-                {user}
-            </Users>
-        );
         return(
-            <Background
-                style={{
-                    height: this.state.height * .77,
-                    width: this.state.width * .20,
-                }}>
-                <Header>
-                    Active Users
-                </Header>
-                { users_list }
-            </Background>
-        )
+            <Container>
+                <User> {user} </User>
+                <Time> {this.date_format(time)} </Time>
+                <Text> {text} </Text>
+            </Container>
+        );
     }
 }
 
-const Background = styled.div`
-    background: ${PRIMARY_BACKGROUND};
-    border-radius: ${BORDER_RADIUS};
-    padding: ${LOGIN_PADDING};
-    height: "100%";
-    box-shadow: 0px 3px 10px rgba(0,0,0,0.9);
-    overflow-y: auto;
+const Container = styled.div`
+    display: flex;
+    flex-direction: row;
 `;
 
-const Header = styled.h1`
-    border-bottom: ${BORDER_BOTTOM_HEADER};
-    font-size: ${HEADER_FONT_SIZE};
+const User = styled.p`
+    border-left: ${BORDER_BOTTOM_HEADER};
+    font-size: ${BODY_FONT_SIZE};
     color: ${HEADER_FONT_COLOR};
     padding: ${LOGIN_PADDING};
-    height: "100%";
+    font-weight: bold;
 `;
 
-const Users = styled.p`
+const Time = styled.p`
     color: ${LIST_FONT_COLOR};
     font-size: ${BODY_FONT_SIZE};
-    height: "100%";
+    padding: ${LOGIN_PADDING};
+    font-style: italic;
+`;
+
+const Text = styled.p`
+    color: ${LIST_FONT_COLOR};
+    font-size: ${BODY_FONT_SIZE};
+    padding: ${LOGIN_PADDING};
 `;

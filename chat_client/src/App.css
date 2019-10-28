@@ -1,16 +1,26 @@
 .App {
-  background-color: #e0e0e0;
+  background-color: #191919;
   min-height: 100vh;
 }
 
-.Messages {
+.Greeting {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 25px
+}
 
+.Messages {
+  position: absolute;
+  left: 0;
+  top: 70px;
+  padding: 25px;
 }
 
 .Users {
   position: absolute;
   right: 0;
-  top: 0;
+  top: 70px;
   padding: 25px;
 }
 
@@ -26,7 +36,11 @@
   position: absolute;
   top: 0;
   z-index: 1;
-  background: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.75);
+}
+
+.login-form {
+  color: #FFFFFF;
 }
 
 
