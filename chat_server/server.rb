@@ -24,6 +24,9 @@ post '/login' do
   username = params[:username]
   password = params[:password]
 
+  puts "Username: " + username
+  puts "Password: " + password
+
   if username ==  "" || password == "" 
     [422, []]
   else 
