@@ -1,5 +1,5 @@
 require 'sinatra'
-
+require 'sinatra/cross_origin'
 require 'thin'
 require 'json'
 require 'jwt'
@@ -11,16 +11,32 @@ set :server, :thin
 set :connections, {}
 set :users, {}
 set :server_events, []
-set :last_event_id, ""
+set :bind, '0.0.0.0'
 
-#TODO: Handle Disconnect
-def self.run!
-  server_status_sse('Server Start')
-  super
+$server_started = false
+
+configure do
+  enable :cross_origin
+end
+  
+before do
+  response.headers['Access-Control-Allow-Origin'] = '*'
+end
+  
+# routes...
+options "*" do
+  response.headers["Allow"] = "GET, PUT, POST, DELETE, OPTIONS"
+  response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-User-Email, X-Auth-Token"
+  response.headers["Access-Control-Allow-Origin"] = "*"
+  200
 end
 
 post '/login' do 
-  server_status_sse('Server start')
+  if !$server_started 
+    server_status_sse("Server Started")
+    $server_started = true
+  end
+
   username = params[:username]
   password = params[:password]
 
@@ -38,15 +54,17 @@ post '/login' do
 
         users[username] = create_new_user(password, token)
         join_sse(username)
-        [201, {}, response.to_json]
+
+        response_headers = {} 
+        response_headers["keep-alive"] = 'timeout=600'
+        [201, response_headers, response.to_json]
     else   
       if user['password'] == password
-        token = generate_JWT(password)
+        token = generate_JWT(username)
         response = {}
         response['token'] = token
 
         users[username]['token'] = token
-        join_sse(username)
         [201, {}, response.to_json]
       else 
       [403, []]
@@ -64,6 +82,9 @@ post '/message' do
   end
   event = []
   token = request.env["HTTP_AUTHORIZATION"]
+
+  response_headers = {} 
+
   if token == "" or token == nil
     status = 422
     event = []
@@ -78,49 +99,54 @@ post '/message' do
     event = []
   end
   if status == 201
+    response_headers["keep-alive"] = 'timeout=600'
     message_sse(message, find_user(token.split(' ')[1], users))
   end
-  [status, event]
+  [status, response_headers, event]
 end
 
 get '/stream/:signed_token' do
   token = params[:signed_token]
   decoded_token = decode_JWT(token)
-  if decoded_token == nil 
+  username = decoded_token[0]['data']
+  if decoded_token == nil || users[username] == nil
     [403, []]
   else
+    join_sse(username)
     existing_out = connections[token]
 
     if existing_out != nil
-      disconnect_sse(token)
-    end 
-
-    username = decoded_token[0]['data']
-
-    stream(:keep_open) do |out|
-      connections[token] = out
-
-      last_event_id = users[username]['last_event_id'].to_s
-
-      if last_event_id == nil
-        get_old_messages_status(token)
-      else 
-        get_missed_messages(last_event_id, token)
-      end
-      users_sse(token)
-
       disconnect_sse(token, username)
-      message_sse('Message send while disconnected', username)
-      # out.callback {connections.delete(out)}
     end 
+
+    response_headers = {} 
+    response_headers["Content-Type"] = 'text/event-stream'
+    response_headers["keep-alive"] = 'timeout=600'
+
+    [200, response_headers, 
+      stream(:keep_open) do |out|
+        connections[token] = out
+        
+        connections.reject! {|token, out| out.closed?}
+
+        last_event_id = request.env['HTTP_LAST_EVENT_ID']
+        
+        #get_missed_messages(last_event_id, token)
+        # if last_event_id == nil
+        # else 
+        get_missed_messages(last_event_id, token)
+        # end
+        users_sse(token)
+        out.callback { disconnect_sse(token, username) }
+      end
+    ]
   end
-end  
+end   
 
 helpers do
   def connections; self.class.connections; end 
   def users; self.class.users; end 
-  def server_events; self.class.server_events; end
-  def last_event_id; self.class.last_event_id; end
+  def server_events; self.class.server_events; end 
 
   def create_new_user(password, token) 
       new_user = {}
@@ -164,7 +190,7 @@ helpers do
   # TODO: Figure out how to generate IDs for SSE events 
   # TODO: Time might be slightly off
 
-  def disconnect_sse(token)
+  def disconnect_sse(token, username)
     out = connections[token]
 
     if stream != nil
@@ -180,7 +206,6 @@ helpers do
       out << "event: " + event['type'] + "\n"
       out << "id: " + event['id'] + "\n\n"
 
-      users['last_event_id'] = last_event_id
       out.close
       connections.delete(token)
       add_to_event_queue(event)
@@ -310,19 +335,13 @@ helpers do
         end
       else 
         if event['id'] == last_event_id
-          last_message_found == true 
+          last_message_found = true 
         end
       end
     }
 
     if !last_message_found
-      server_events.each { |event|
-        if event['type'] == 'Message'
-          out << "data: " + event['data'].to_json + "\n"
-          out << "event: " + event['type'].to_s + "\n"
-          out << "id: " + event['id'].to_s + "\n\n"
-        end
-      }
+      get_old_messages_status(token)
     end 
   end
 
