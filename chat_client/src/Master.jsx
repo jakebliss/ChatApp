@@ -34,7 +34,6 @@ export default class Master extends React.Component {
           sessionStorage.username = username;
           console.log("URL:" + sessionStorage.url);
           request.open("POST", sessionStorage.url + "/login");
-          request.setRequestHeader('Content-Type', 'multipart/form-data')
           request.onreadystatechange = function() {
             if (this.readyState != 4) return;
             if (this.status === 201) {
@@ -51,6 +50,7 @@ export default class Master extends React.Component {
               alert(this.status + "failure to /login")
             }
           };
+          console.log(request)
           request.send(form);
         }
 
@@ -83,6 +83,7 @@ export default class Master extends React.Component {
           if (message.value === "") {
             return;
           }
+          console.log("TOKENM", sessionStorage.accessToken)
           var form = new FormData();
           form.append("message", message);
           var request = new XMLHttpRequest();

@@ -177,6 +177,10 @@ helpers do
 
   def find_user(token, users)
     user_exists = false
+    puts "TOKEN"
+    puts token
+    puts "USERS"
+    puts users
     users.each { |key, value|
       if value['token'] == token
         user_exists = key
