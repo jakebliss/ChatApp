@@ -59,7 +59,7 @@ post '/login' do
       join_sse(username)
       [201, {}, response.to_json]
     else   
-      if users['password'] == password
+      if user['password'] == password
         token = generate_JWT(username)
         response = {}
         response['token'] = token

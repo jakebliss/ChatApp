@@ -23,16 +23,22 @@ export default class Master extends React.Component {
     }
     
     render() {
+      const date_format = (timestamp) => {
+        var date = new Date(timestamp * 1000);
+        return (
+            date.toLocaleDateString("en-US") +
+            " " +
+            date.toLocaleTimeString("en-US")
+          );
+        }
         //Called after login is pressed in login modal
         const login = (url, username, password) => {
-          console.log("Succesful Login" + url + username + password);
           var request = new XMLHttpRequest();
           var form = new FormData();
           form.append("password", password);
           form.append("username", username);
-          sessionStorage.url = url;
+          sessionStorage.url = "https://cors-anywhere.herokuapp.com/" + url;
           sessionStorage.username = username;
-          console.log("URL:" + sessionStorage.url);
           request.open("POST", sessionStorage.url + "/login");
           request.onreadystatechange = function() {
             if (this.readyState != 4) return;
@@ -55,7 +61,6 @@ export default class Master extends React.Component {
 
         //Called when a disconnect is triggered
         const disconnect = () => {
-          console.log("disconnect");
           this.setState({
             loggedInStatus: "you are not logged in",
             users: [],
@@ -66,7 +71,6 @@ export default class Master extends React.Component {
 
         //Called when a user is connected
         const connect = () => {
-          console.log("CONNECTING")
           this.setState({
             loggedInStatus: "you are logged in",
             user: sessionStorage.username,
@@ -75,7 +79,6 @@ export default class Master extends React.Component {
         }
 
         const send_message = (message) => {
-          console.log("SENDING: ", message);
           if (sessionStorage.accessToken === undefined ){
             return;
           }
@@ -102,7 +105,6 @@ export default class Master extends React.Component {
 
         //Called when a new message needs to be displayed
         const output = (message) => {
-          console.log("OUTPUT: ", message)
           this.setState({
             messages: [...this.state.messages,               
             <Message 
@@ -114,7 +116,6 @@ export default class Master extends React.Component {
         }
 
         const display_users = (users) => {
-          console.log("Displaying", users)
           this.setState({
             users: users
           });
@@ -134,7 +135,6 @@ export default class Master extends React.Component {
       
         //opens a new stream to listen for SSE events
         const open_stream = () => {
-          console.log("CALLING OPEN STREAM")
           stream = new EventSource(
             sessionStorage.url + "/stream/" + sessionStorage.accessToken
           );
@@ -147,12 +147,12 @@ export default class Master extends React.Component {
             "Disconnect",
             function(event) {
               var data = JSON.parse(event.data);
-              console.log("Disconnect: ", data);
               stream.close();
               disconnect();
               delete sessionStorage.accessToken;
               show_login();
-            }
+            },
+            false
           );
 
           stream.addEventListener(
@@ -161,12 +161,10 @@ export default class Master extends React.Component {
               var data
               try {
                 data = JSON.parse(event.data);
-                console.log("Join: ", data);
-                console.log("HNNG: ", this.state)
                 add_user(data.user);
                 output({
                   user: data.user,
-                  time: data.created,
+                  time: date_format(data.created),
                   message: "JOINED",
                 }
               )
@@ -174,7 +172,8 @@ export default class Master extends React.Component {
           catch(e) {
             console.log("Too bad so sad", e)
             }
-          }
+          },
+          false
 
           );
 
@@ -182,62 +181,63 @@ export default class Master extends React.Component {
             "Message",
             function(event) {     
               var data = JSON.parse(event.data); 
-              console.log("Message: ", data);     
               output(data);
-            }
+            },
+            false
           );
 
           stream.addEventListener(
             "Server Status",
             function(event) {
               var data = JSON.parse(event.data);
-              console.log("SS: ", data);
               var message = {
                 user: "Server Status",
-                time: data.created,
+                time: date_format(data.created),
                 text: data.status,
               }
               output(message)
-            }
+            },
+            false
           );
 
           stream.addEventListener(
             "Users",
             function(event) {
-              console.log("WHATS UP:")
               var data
               try {
                 data = JSON.parse(event.data);
-                console.log("Users: ", data.users);
                 connect();
                 display_users(data.users);
               } catch(e) {
-                console.log("Too bad so sad.")
               }
-            }
+            },
+            false
           );
 
           stream.addEventListener(
             "Part",
             function(event) {
               var data = JSON.parse(event.data);
-              console.log("Part: ", data);
               remove_user(data.user);
               output({
                 user: data.user,
-                time: data.created,
+                time: date_format(data.created),
                 message: "PART",
               })
-            }
+            },
+            false
           );
 
           
           stream.addEventListener(
             "error",
             function(event) {
-              console.log("Oh well", event)
-            }
-          )
+              disconnect()
+              delete sessionStorage.accessToken;
+              show_login()
+            },
+            false
+          );
           
         }
 
