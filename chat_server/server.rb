@@ -40,9 +40,6 @@ post '/login' do
   username = params[:username]
   password = params[:password]
 
-  puts "Username: " + username
-  puts "Password: " + password
-
   if username ==  "" || password == "" 
     [422, []]
   else 
@@ -108,10 +105,11 @@ end
 get '/stream/:signed_token' do
   token = params[:signed_token]
   decoded_token = decode_JWT(token)
-  username = decoded_token[0]['data']
-  if decoded_token == nil || users[username] == nil
+
+  if decoded_token == nil || decoded_token[0]['data'] == nil
     [403, []]
   else
+    username = decoded_token[0]['data']
     join_sse(username)
     existing_out = connections[token]
 
