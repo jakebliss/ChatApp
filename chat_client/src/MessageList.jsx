@@ -48,13 +48,10 @@ export default class MessageList extends React.Component {
                     height: this.state.height * .77,
                     width: this.state.width * .73,
                 }}>
-                    <div style ={{overflowY: 'auto'}}>
                     <Header>
                     Beginning of Messages
                 </Header>
                 { messages_list }
-                    </div>
-
             </Background>
         )
     }
@@ -65,6 +62,7 @@ const Background = styled.div`
     border-radius: ${BORDER_RADIUS};
     padding: ${LOGIN_PADDING};
     box-shadow: 0px 3px 7px rgba(0,0,0,0.9);
+    overflow-y: auto;
 `;
 
 const Header = styled.h1`

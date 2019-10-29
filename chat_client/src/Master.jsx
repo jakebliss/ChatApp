@@ -34,15 +34,14 @@ export default class Master extends React.Component {
           sessionStorage.username = username;
           console.log("URL:" + sessionStorage.url);
           request.open("POST", sessionStorage.url + "/login");
+          request.setRequestHeader('Content-Type', 'multipart/form-data')
           request.onreadystatechange = function() {
-            console.log(this)
             if (this.readyState != 4) return;
             if (this.status === 201) {
               password = "";
               username = "";
               url = "";
               sessionStorage.accessToken = JSON.parse(this.responseText).token;
-              console.log("TOKEN: " + sessionStorage.accessToken)
               open_stream()
             } 
             else if (this.status === 403) {
@@ -68,6 +67,7 @@ export default class Master extends React.Component {
 
         //Called when a user is connected
         const connect = () => {
+          console.log("CONNECTING")
           this.setState({
             loggedInStatus: "you are logged in",
             user: sessionStorage.username,
@@ -77,9 +77,26 @@ export default class Master extends React.Component {
 
         const send_message = (message) => {
           console.log("SENDING: ", message);
+          if (sessionStorage.accessToken === undefined ){
+            return;
+          }
+          if (message.value === "") {
+            return;
+          }
+          var form = new FormData();
+          form.append("message", message);
+          var request = new XMLHttpRequest();
+          request.open("POST", sessionStorage.url + "/message");
+          request.setRequestHeader(
+            "Authorization",
+            "Bearer " + sessionStorage.accessToken
+          );
+          request.send(form);
+          
         }
 
         const show_login = () => {
+          console.log("Showing login")
           this.setState({
             showLogin: true,
           });
@@ -88,12 +105,12 @@ export default class Master extends React.Component {
         //Called when a new message needs to be displayed
         const output = (message) => {
           console.log("OUTPUT: ", message)
-         this.setState({
+          this.setState({
             messages: [...this.state.messages,               
             <Message 
               user={message.user} 
               time={message.created} 
-              text={message.text}
+              text={message.message}
             />]
          });
         }
@@ -108,6 +125,7 @@ export default class Master extends React.Component {
       
         //opens a new stream to listen for SSE events
         const open_stream = () => {
+          console.log("CALLING OPEN STREAM")
           this.setState({
               showLogin: false
           })
@@ -125,7 +143,7 @@ export default class Master extends React.Component {
               delete sessionStorage.accessToken;
               show_login();
             }
-          )
+          );
 
           stream.addEventListener(
             "Join",
@@ -134,22 +152,23 @@ export default class Master extends React.Component {
               console.log("Join: ", data.user);
               //display_users([...this.state.users, data.user]);
               //output({
-               // user: data.user,
-               // time: data.created,
-               // text: "JOINED",
+                //user: data.user,
+                //time: data.created,
+                //text: "JOINED",
                // }
              // )
             }
-          )
+          );
 
           stream.addEventListener(
             "Message",
-            function(event) {        
+            function(event) {     
+              console.log("CAlling message")   
               var data = JSON.parse(event.data); 
               console.log("Message: ", data);     
               output(data);
             }
-          )
+          );
 
           stream.addEventListener(
             "Server Status",
@@ -161,9 +180,9 @@ export default class Master extends React.Component {
                 time: data.created,
                 text: data.status,
               }
-              output()
+              output(message)
             }
-          )
+          );
 
           stream.addEventListener(
             "Users",
@@ -174,7 +193,7 @@ export default class Master extends React.Component {
               connect();
               display_users(data.users);
             }
-          )
+          );
 
           stream.addEventListener(
             "Part",
@@ -186,7 +205,18 @@ export default class Master extends React.Component {
               })
               display_users(new_users);
             }
+          );
+
+          /*
+          stream.addEventListener(
+            "error",
+            function(event) {
+              console.log("ERROR", event)
+              disconnect();
+              show_login();
+            }
           )
+          */
         }
 
         return(

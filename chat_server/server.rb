@@ -26,7 +26,7 @@ end
 # routes...
 options "*" do
   response.headers["Allow"] = "GET, PUT, POST, DELETE, OPTIONS"
-  response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-User-Email, X-Auth-Token"
+  response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-User-Email, X-Auth-Token, Cache-Control, last-event-id"
   response.headers["Access-Control-Allow-Origin"] = "*"
   200
 end
@@ -39,30 +39,38 @@ post '/login' do
 
   username = params[:username]
   password = params[:password]
-
+  puts "U: "
+  puts username
+  puts "P: "
+  puts password
   if username ==  "" || password == "" 
     [422, []]
   else 
     user = users[username]
+    puts "A: "
+    puts users
     if user == nil 
+      puts "HERE"
       token = generate_JWT(username)
-        response = {}
-        response['token'] = token
+      response = {}
+      response['token'] = token
 
-        users[username] = create_new_user(password, token)
-        join_sse(username)
-        [201, {}, response.to_json]
+      users[username] = create_new_user(password, token)
+      join_sse(username)
+      [201, {}, response.to_json]
     else   
-      if user['password'] == password
+      if users['password'] == password
         token = generate_JWT(username)
         response = {}
         response['token'] = token
 
         users[username]['token'] = token
         join_sse(username)
+        puts "Success"
         [201, {}, response.to_json]
       else 
-      [403, []]
+        puts "WACK"
+        [403, []]
       end
     end 
   end 
@@ -261,6 +269,7 @@ helpers do
   end 
 
   def users_sse(token)
+    puts "calling users sse"
     out = connections[token]
 
     if out != nil

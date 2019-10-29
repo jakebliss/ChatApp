@@ -18,9 +18,11 @@ export default class Input extends React.Component {
         this.state = { 
             width: 0, 
             height: 0,
+            message: 'test',
          };
         this.updateWindowDimensions = this.updateWindowDimensions.bind(this);
         this.handleMessageChange = this.handleMessageChange.bind(this);
+        this.sendMessage = this.sendMessage.bind(this);
     }
     
     componentDidMount() {
@@ -37,7 +39,11 @@ export default class Input extends React.Component {
     }
 
     handleMessageChange(event) {
-        message = event.target.value
+        this.setState({message: event.target.value})
+    }
+
+    sendMessage() {
+        this.props.send(this.state.message)
     }
 
     render() {
@@ -56,7 +62,7 @@ export default class Input extends React.Component {
                         }}>
                         <Form.Control onChange={this.handleMessageChange} placeholder="Type message" />
                     </Form>
-                    <Button onClick={this.props.send(message)}>send</Button>
+                    <Button onClick={this.sendMessage}>send</Button>
                 </Container>
             </Background>
         )
