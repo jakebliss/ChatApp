@@ -290,7 +290,8 @@ helpers do
       event['data'] = data
       event['type'] = 'Users'
       event['id'] = generate_encoded_id
-
+      puts "DATA"
+      puts data
       out << "data: " + event['data'].to_json + "\n"
       out << "event: " + event['type'] + "\n"
       out << "id: " + event['id'] + "\n\n"

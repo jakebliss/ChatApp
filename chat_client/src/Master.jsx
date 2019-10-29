@@ -123,16 +123,30 @@ export default class Master extends React.Component {
           });
         }
 
+        const add_user = (user) => {
+          console.log("new user", user)
+          display_users([...this.state.users, user])
+        }
+
+        const remove_user = (user) => {
+          console.log("removing user", user)
+          var new_users = this.state.users.filter((value, index, arr) => {
+            return value != user;
+          })
+          display_users(new_users)
+        }
+
       
         //opens a new stream to listen for SSE events
         const open_stream = () => {
           console.log("CALLING OPEN STREAM")
-          this.setState({
-              showLogin: false
-          })
           stream = new EventSource(
             sessionStorage.url + "/stream/" + sessionStorage.accessToken
           );
+
+          this.setState({
+            showLogin: false
+          })
       
           stream.addEventListener(
             "Disconnect",
@@ -149,16 +163,24 @@ export default class Master extends React.Component {
           stream.addEventListener(
             "Join",
             function(event) {
-              var data = JSON.parse(event.data);
-              console.log("Join: ", data.user);
-              //display_users([...this.state.users, data.user]);
-              //output({
-                //user: data.user,
-                //time: data.created,
-                //text: "JOINED",
-               // }
-             // )
+              var data
+              try {
+                data = JSON.parse(event.data);
+                console.log("Join: ", data);
+                console.log("HNNG: ", this.state)
+                add_user(data.user);
+                output({
+                  user: data.user,
+                  time: data.created,
+                  message: "JOINED",
+                }
+              )
             }
+          catch(e) {
+            console.log("Too bad so sad", e)
+            }
+          }
+
           );
 
           stream.addEventListener(
@@ -188,11 +210,16 @@ export default class Master extends React.Component {
           stream.addEventListener(
             "Users",
             function(event) {
-              console.log("WHATS UP: ", event)
-              var data = JSON.parse(event.data);
-              console.log("Users: ", data.users);
-              connect();
-              display_users(data.users);
+              console.log("WHATS UP:")
+              var data
+              try {
+                data = JSON.parse(event.data);
+                console.log("Users: ", data.users);
+                connect();
+                display_users(data.users);
+              } catch(e) {
+                console.log("Too bad so sad.")
+              }
             }
           );
 
@@ -201,10 +228,12 @@ export default class Master extends React.Component {
             function(event) {
               var data = JSON.parse(event.data);
               console.log("Part: ", data);
-              var new_users = this.state.users.filter((value, index, arr) => {
-                return value != event.data.user;
+              remove_user(data.user);
+              output({
+                user: data.user,
+                time: data.created,
+                message: "PART",
               })
-              display_users(new_users);
             }
           );
 

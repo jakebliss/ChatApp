@@ -45,7 +45,7 @@ export default class MessageList extends React.Component {
         return(
             <Background 
                 style={{
-                    height: this.state.height * .77,
+                    height: this.state.height * .70,
                     width: this.state.width * .73,
                 }}>
                     <Header>
