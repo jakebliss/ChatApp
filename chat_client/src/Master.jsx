@@ -50,7 +50,6 @@ export default class Master extends React.Component {
               alert(this.status + "failure to /login")
             }
           };
-          console.log(request)
           request.send(form);
         }
 
@@ -83,7 +82,6 @@ export default class Master extends React.Component {
           if (message.value === "") {
             return;
           }
-          console.log("TOKENM", sessionStorage.accessToken)
           var form = new FormData();
           form.append("message", message);
           var request = new XMLHttpRequest();
@@ -93,11 +91,10 @@ export default class Master extends React.Component {
             "Bearer " + sessionStorage.accessToken
           );
           request.send(form);
-          
         }
 
+        //Display login modal
         const show_login = () => {
-          console.log("Showing login")
           this.setState({
             showLogin: true,
           });
@@ -124,12 +121,10 @@ export default class Master extends React.Component {
         }
 
         const add_user = (user) => {
-          console.log("new user", user)
           display_users([...this.state.users, user])
         }
 
         const remove_user = (user) => {
-          console.log("removing user", user)
           var new_users = this.state.users.filter((value, index, arr) => {
             return value != user;
           })
@@ -186,7 +181,6 @@ export default class Master extends React.Component {
           stream.addEventListener(
             "Message",
             function(event) {     
-              console.log("CAlling message")   
               var data = JSON.parse(event.data); 
               console.log("Message: ", data);     
               output(data);
@@ -237,16 +231,14 @@ export default class Master extends React.Component {
             }
           );
 
-          /*
+          
           stream.addEventListener(
             "error",
             function(event) {
-              console.log("ERROR", event)
-              disconnect();
-              show_login();
+              console.log("Oh well", event)
             }
           )
-          */
+          
         }
 
         return(

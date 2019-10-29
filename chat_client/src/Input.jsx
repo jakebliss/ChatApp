@@ -50,7 +50,7 @@ export default class Input extends React.Component {
         return (
             <Background
                 style={{
-                    height: this.state.height * .08,
+                    height: 70,
                 }}>
                 <Header>
                 </Header>

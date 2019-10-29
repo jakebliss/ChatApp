@@ -87,7 +87,7 @@ export default class LoginForm extends React.Component {
                         </Form.Group>
 
                         <Form.Group controlId="formBasicEmail">
-                            <Form.Label className="login-form"> Email address</Form.Label>
+                            <Form.Label className="login-form"> Username </Form.Label>
                             <Form.Control onChange={this.handleUsernameChange} placeholder={this.state.userName} />
                         </Form.Group>
 

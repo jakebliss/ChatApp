@@ -21,7 +21,12 @@ export default class MessageList extends React.Component {
     componentDidMount() {
         this.updateWindowDimensions();
         window.addEventListener('resize', this.updateWindowDimensions);
+        this.scrollToBottom();
     }
+
+    componentDidUpdate() {
+        this.scrollToBottom();
+      }
       
     componentWillUnmount() {
         window.removeEventListener('resize', this.updateWindowDimensions);
@@ -30,6 +35,10 @@ export default class MessageList extends React.Component {
     updateWindowDimensions() {
         this.setState({ width: window.innerWidth, height: window.innerHeight });
     }
+
+    scrollToBottom = () => {
+        this.messagesEnd.scrollIntoView({ behavior: "smooth" });
+      }
 
     render() {
         const {
@@ -52,6 +61,9 @@ export default class MessageList extends React.Component {
                     Beginning of Messages
                 </Header>
                 { messages_list }
+                <div style={{ float:"left", clear: "both" }}
+                    ref={(el) => { this.messagesEnd = el; }}>
+                </div>
             </Background>
         )
     }
