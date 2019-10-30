@@ -11,3 +11,4 @@ RUN gem install bundler && \
 
 COPY server.rb config.ru ./
 CMD bundle
+CMD rackup --host 0.0.0.0 -p 3000
